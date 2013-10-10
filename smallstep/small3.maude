@@ -1,0 +1,39 @@
+mod SMALL3 is
+  inc SMALLSTEP-SEM .
+
+	var N M : Name .
+	var E : Environment .
+	var F F' F1 F2 : FinalSymbol .
+	var A B : Name .
+	var P Q P1 Q1 PP QQ PP' QQ' X P' Q' : Cprocess .
+	var L : Names .
+	var C C' C1 : Compensation .
+	
+
+---parallel composition
+	crl [parl1] : E |- < F , (PP ok || F2 QQ) , L > => E |- < (F o F') , (PP' F' || F2 QQ), L N > if 
+	             E |- < ok , PP , L > => E |- < F' , PP' , L N > .
+	crl [parl2] : E |- < F , (PP F1 || F2 QQ) , L > => E |- < (F o F') , (PP' F' || F2 QQ), L N > if dn(fail,(PP F1 || F2 QQ)) /\
+	             E |- < F1 , PP , L > => E |- < F' , PP' , L N > .
+	crl [parl3] : E |- < F , (PP F1 || F2 QQ) , L > => E |- < (F o F') , (PP' F' || F2 QQ), L N > if not(dn(fail,PP)) /\
+	             E |- < F1 , PP , L > => E |- < F' , PP' , L N > .
+	crl [parr1] : E |- < F , (PP F1 || ok QQ) , L > => E |- < (F o F') , (PP F1 || F' QQ'), L N > if 
+	             E |- < ok , QQ , L > => E |- < F' , QQ' , L N > .
+	crl [parr2] : E |- < F , (PP F1 || F2 QQ) , L > => E |- < (F o F') , (PP F1 || F' QQ'), L N > if dn(fail,(PP F1 || F2 QQ)) /\
+	             E |- < F2 , QQ , L > => E |- < F' , QQ' , L N > .
+	crl [parr3] : E |- < F , (PP F1 || F2 QQ) , L > => E |- < (F o F') , (PP F1 || F' QQ'), L N > if not(dn(fail,QQ)) /\
+	             E |- < F2 , QQ , L > => E |- < F' , QQ' , L N > .
+	crl [intr] : E |- < fail , (PP F1 || ok QQ) , L > => E |- < fail , (PP F1 || fail Q), L tau > if extract(QQ) => (Q) .
+	crl [intl] : E |- < fail , (PP ok || F2 QQ) , L > => E |- < fail , (P fail || F2 QQ), L tau > if extract(PP) => (P) .
+	
+	rl [extr] : extract([C]) => ([C]) .
+	rl [extr] :  extract(A / B) => ([nil]) .
+	crl [extr] :  extract(P ; Q) => (P1) if not(par(P)) /\ extract(P) => (P1) .
+	crl [extr] :  extract(P ; Q) => (P) if (par(P)) .
+	crl [extr] :  extract(P $ C) => (P1 $ C ) if extract(P) => (P1) /\ not(dn(fail,(P1))) .
+	crl [extr] :  extract(P $ C) => ([ cmp((P1)) ; C ]) if extract(P) => (P1) /\ (dn(fail,(P1))) /\ tocmp((P1)) .
+	crl [extr] :  extract(P $ C) =>  ([ C ]) if extract(P) =>  (P1) /\ (dn(fail,(P1))) /\ not(tocmp((P1))) .
+	crl [extr] :  extract(P ok || ok Q) =>  (P ok || fail Q1) if  extract(Q) =>  (Q1) .
+	crl [extr] :  extract(P ok || ok Q) =>  (P1 fail || ok Q) if  extract(P) =>  (P1) .
+
+endm 

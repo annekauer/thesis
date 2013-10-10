@@ -1,0 +1,151 @@
+fmod SMALLSTEP-SYNTAX is
+   inc NAT .
+   inc BOOL .
+   
+   sort Name Names Sagaprocess Cprocess Compensation .  
+   subsort Nat < Name < Names .
+   subsort Name < Sagaprocess Compensation .
+	sorts FinalSymbol State Extraction .
+	subsort Cprocess < Extraction .
+
+
+    op nnil : -> Names [ctor] .
+    op __ : Names Names -> Names [prec 1 ctor assoc id: nnil ] .
+    op tau : -> Name .
+
+	ops ok fail : -> FinalSymbol .
+
+***FinalSymbol for commit, abort, currently executed process and Names is already observed trace
+	op <_,_,_> : FinalSymbol Cprocess Names -> State [prec 25 frozen].
+	op <_,_,_> : FinalSymbol Sagaprocess Names -> State [prec 25 frozen].
+	op <_,_> : Compensation Names -> State [prec 25 frozen].
+  
+  
+	op snil : -> Sagaprocess .
+---	op _;_ : Sagaprocess Sagaprocess -> Sagaprocess [prec 30  gather (E e) ] .
+---	op __||_ _ : Sagaprocess FinalSymbol FinalSymbol Sagaprocess -> Sagaprocess [prec 30  ] .
+    
+	op _/_ : Name Name -> Cprocess [prec 25 ] .
+	op _;_ : Cprocess Cprocess -> Cprocess [prec 30  gather (E e)  ] .
+	op _ _||_ _ : Cprocess FinalSymbol FinalSymbol Cprocess -> Cprocess [prec 30] .
+	op _$_ : Cprocess Compensation -> Cprocess [gather (E e) prec 35 frozen] .
+	op [_] : Compensation -> Cprocess [frozen] .
+	
+	op nil : -> Compensation .
+	op _;_ : Compensation Compensation -> Compensation [prec 30  gather (E e)] .
+	op _||_ : Compensation Compensation -> Compensation [prec 30  gather (E e)] .
+	
+	op {_} : Cprocess -> Sagaprocess [prec 20 ] .
+
+	vars C C1 C2 : Compensation .
+	vars P Q P1 Q1 : Cprocess .
+	vars S T : Sagaprocess .
+	var A B : Name .
+	var F F1 F2 : FinalSymbol .
+	 	
+---predicates
+	op dn : Compensation -> Bool .
+	eq dn(nil) = true .
+	eq dn(A) = false .
+	eq dn(C1 ; C2) = dn(C1) .
+	eq dn(C1 || C2) = dn(C1) and dn(C2) .
+	
+	op dn : FinalSymbol Cprocess -> Bool .
+	eq dn(F,[ C ]) = true .
+	eq dn(F, (A / B)) = false .
+	eq dn(F,(P ; Q)) = dn(F,P) .
+	eq dn(F,(P $ C)) = dn(F,P) .
+	eq dn(F, (P F1 || F2 Q)) = ((F == F1) and (F1 == F2)) and (dn(F,P) and dn(F,Q)) .
+
+---	op dn : Sagaprocess -> Bool .
+---	eq dn(snil) = true .
+---	eq dn(A) = false .
+---	eq dn({ P }) = false .
+---	eq dn(S ; T) = dn(S) .
+---	eq dn((S F1 || F2 T)) = (dn(S) and dn(T)) .
+	
+	op cmp : Cprocess -> Compensation .
+	eq cmp([ C ]) = C .
+	eq cmp(P ; Q) = cmp(P) .
+	ceq cmp(P $ C) = C if dn(cmp(P)) .
+	eq cmp(P $ C) = cmp(P) ; C [owise] .
+	eq cmp((P F1 || F2 Q)) = (cmp(P) || cmp(Q)) .
+	
+	op tocmp : Cprocess -> Bool .
+	eq tocmp(P) = not(dn(cmp(P))) .
+	
+	op _o_ : FinalSymbol FinalSymbol -> FinalSymbol [comm assoc] .
+	eq ok o ok = ok .
+	eq fail o F = fail .
+
+	op par : Cprocess -> Bool .	
+	eq par((P F1 || F2 Q)) = true .
+	eq par(P $ C) = par(P) .
+	eq par(P) = false [owise] . 
+	op extract : Cprocess -> Extraction [frozen] .
+
+endfm
+
+
+mod SMALLSTEP-SEM is
+	pr SMALLSTEP-SYNTAX .
+	
+	sort Environment .
+	subsort Name < Environment .
+	
+	op empty : -> Environment .
+	op _,_ : Environment Environment -> Environment [assoc comm id: empty] .
+	
+	var N M : Name .
+	var E : Environment .
+	var F F' F1 F2 : FinalSymbol .
+	var A B : Name .
+	var P Q P1 Q1 PP QQ PP' QQ' X P' Q' : Cprocess .
+	var L : Names .
+	var C C' C1 : Compensation .
+
+	op _in_ : Name Environment -> Bool .
+	eq N in empty = false .
+	eq N in (N,E) = true .
+	ceq N in (M,E) = N in E if N =/= M .
+	
+	op _|-_ : Environment State -> State [frozen] .
+
+***basic activies and compensation pairs
+	crl [s-act] : E |- < ok , A / B , L >  => E |- < ok , [B] , L A > if A in E .
+	crl [f-act] : E |- < ok , A / B , L > => E |- < fail , [nil] , L tau > if not(A in E) .
+---	crl [s-act] : E |- < ok , A , L > => E |- < ok , [nil] , L A > if A in E .
+---	crl [f-act] : E |- < ok , A , L > => E |- < fail , [nil] , L tau > if not(A in E) .
+
+***sequential composition
+	crl [s-seq] : E |- < ok , (PP ; QQ) , L > => E |- < ok , (QQ $ cmp(PP')), L N > if E |- < ok , PP , L > => E |- < ok , PP' , L N > /\ dn(ok,PP').
+	crl [a-seq] : E |- < ok , (PP ; QQ) , L > => E |- < fail , P , L N > if E |- < ok , PP , L > => E |- < fail , P , L N > .
+	crl [seq]   : E |- < ok , (PP ; QQ) , L > => E |- < ok , (PP' ; QQ) , L N > if E |-  < ok , PP , L > => (E |-   < ok , (PP') , L N >) /\ not dn(ok,PP') .
+
+	crl [as-step1]  : E |-  < F , (QQ $ C) , L > => E |- < F' , [cmp(QQ') ; C], L N > if E |-  < F , QQ, L > => E |- < F' , QQ', L N > /\ 
+														dn(F',QQ') /\ tocmp(QQ') .
+	crl [as-step2]  : E |-  < F , (QQ $ C) , L > => E |- < F' , [C], L N > if E |-  < F , QQ, L > => E |- < F' , QQ', L N > /\ 
+														dn(F',QQ') /\ dn(cmp(QQ')) .
+	crl [step]    : E |-  < F , (QQ $ C) , L > => E |- < F' , (QQ' $ C) , L N > if E |- < F , QQ , L > => (E |- < F' , QQ' , L N >) /\ 
+														not(dn(F',QQ')) .
+	
+
+---compensation
+	crl [comp]    : E |- < fail , [C] , L > => E |- < fail , [C1] , L N > if < C , L > => < C1 , L N > .
+	rl [cact] : < A, L > => < nil, L A > .
+	crl [c-seq2] :  < (C ; C1), L > => < C1, L A > if < C , L > => < C' , L A > /\ dn(C') .
+	crl [c-seq2] :  < (C ; C1), L > => < (C' ; C1), L A > if < C , L > => < C' , L A > /\ not(dn(C')) .
+	crl [c-parl] :  < (C || C1), L > => < (C' || C1), L A > if < C , L > => < C' , L A > .
+	crl [c-parr] :  < (C || C1), L > => < (C || C'), L A > if < C1 , L > => < C' , L A > .
+
+---transaction
+	crl [s-saga]  : E |- < ok , {PP} , L > => E |- < ok , snil , L N >  if E |- < ok , PP , L >  => E |- < ok , P , L N > /\ dn(ok,P)  .
+	crl [a-saga2]  : E |- < F , {PP} , L > => E |- < ok , snil , L N >  if E |- < F , PP , L >  => E |- < fail , PP' , L N > /\ 
+																	dn(fail,PP') /\ not(tocmp(PP'))  .
+	crl [a-saga1]  : E |- < F , {PP} , L > => E |- < fail , {PP'} , L N >  if E |- < F , PP , L >  => E |- < fail , PP' , L N > /\ 
+																	dn(fail,PP') /\ tocmp(PP')  .
+	crl [saga]  : E |- < F , {PP} , L > => E |- < F' , {PP'} , L N >  if E |- < F , PP , L >  => E |- < F' , PP' , L N > /\ 
+																	not(dn(F',PP')) .
+
+	
+endm

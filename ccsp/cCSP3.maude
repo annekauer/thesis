@@ -1,0 +1,23 @@
+fmod cCSP3 is
+
+	inc cCSPdiff .
+
+	var CBP CBQ  : tracepairset .
+	var P Q P1 Q1 : trace .
+	var QQ : tracepair .
+	vars p q p1 q1 : names .
+	vars w w1 : end .
+
+	***sequential composition of traces
+	eq ((p < ? >) ; P) = p < ? > .	
+	eq ((p < ? >, p1 < w1 >) ; QQ ) = (p < ? >) , p1 < w1 > .
+	***parallel composition of traces
+	eq (p < w >) || q < w1 > =  (p ||| q)  < w & w1 > .
+	***parallel composition of trace pairs
+	eq ((P,P1) || (Q,Q1)) = (P || Q),(P1 || Q1) .
+	***Compensation pairs
+	eq (( p < ? >)/ P1) = ((nil < ? >),(nil < ok >)) U (( p < ? >),(nil < ok >))   .
+	eq (( p < ! >)/ P1) = ((nil < ? >),(nil < ok >)) U (( p < ! >),(nil < ok >)) .
+	eq (( p < ok >) / P1 ) =((nil < ? >),(nil < ok >)) U (( p < ok >) , P1) .
+
+endfm

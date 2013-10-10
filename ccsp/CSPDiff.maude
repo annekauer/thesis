@@ -1,0 +1,186 @@
+fmod cCSPdiff is
+	inc NAT .
+	inc EXT-BOOL .
+	 
+	*** Definition sorts and subsorts
+	sort trace  traceset  sagaprocess .
+	subsort trace < traceset .
+	sort name names nameset .
+	sort end env .
+	subsort Nat < name < names < sagaprocess nameset .
+	
+	sort  tracepair  tracepairset cprocess .
+	subsort tracepair < tracepairset .
+	
+	*** Definition variables
+	var CBP CBQ  : tracepairset .
+	var P Q P1 Q1 : trace .
+	var QQ PP : tracepair .
+	vars cnbp cnbp1 : cprocess .
+	vars p q p1 q1 : names .
+	var N : Nat .
+	vars xx vv : env .
+	vars nbp nbp1 : sagaprocess .
+	vars ns nt : nameset .
+	vars BP BQ  : traceset .
+	vars np nq : name .
+	vars w w1 : end .
+
+	
+	*** Processes or Saga
+		*** Definition operators for traces
+	ops ok ? ! : -> end [ctor] .
+	op nil : -> names [ctor] .
+	op _ _ : names names -> names [prec 1 ctor assoc id: nil] .
+	op _<_> : names end -> trace [prec 3 ctor] .
+	op skip : -> name .
+	op yield : -> name .
+	op throw : -> name .
+	op _;_ : traceset traceset -> traceset [prec 33  gather (E e)] .
+	op _||_ : traceset traceset -> traceset [prec 33 gather (E e)  ] .
+	op nill : -> traceset [ctor] .
+	op _U_ :  traceset traceset -> traceset [ctor comm assoc prec 21 id: nill] .
+
+	op _;_ : sagaprocess sagaprocess -> sagaprocess [prec 30  gather (E e)  ] .
+	op _ || _ : sagaprocess sagaprocess -> sagaprocess [prec 30  gather (E e)  ] .
+
+	***definition operators for saga processes
+	op _-_	: name end -> env .
+	op nilenv : -> env [ctor] .
+	op _,_ : env env -> env [ assoc gather (E e) id: nilenv ]  .
+	op _@_ : name env -> trace [prec 1 ] .
+	op _@_ : sagaprocess env -> traceset [prec 1 ] .
+
+	***definition operators for nameset and end
+	op _ $ _  : name nameset -> nameset [prec 2 ]  .
+	op _ U _ : nameset nameset -> nameset [prec 30 comm gather (E e)  ] . 
+	op _|||_ : names names -> nameset [ gather (E e)  ] .
+	op _&_ : end end -> end [prec 100 comm] .
+	
+	***definition of operators relating traces
+		***inclusion
+	op _in_ : traceset traceset -> Bool .
+		***equality 
+	op _equal_ : traceset traceset -> Bool .
+		***difference
+	op _diff_ : traceset traceset -> traceset .
+		***intersection
+	op _int_  : traceset traceset -> traceset .
+	
+	*** Definition of equations for traces
+		***sequential composition
+	eq BP ; nill = nill .	
+	eq nill ; BP = nill .
+	eq ((p < ! >) ; Q) = p < ! >  .
+	eq ((p < ok >) ; q < w1 >) = p q < w1 >  .
+		***parallel composition
+	eq BP || nill = BP . 
+
+	***operator &
+	eq ! & w = ! .
+	eq ? & ? = ? .
+	eq ? & ok = ? .
+	eq ok & ok = ok .
+
+	***interleaving of traces
+	eq p ||| nil = p .
+	eq nil ||| p = p .
+	eq (np p) ||| (nq q) = ( np $ (p ||| nq q) ) U ( nq $ (np p ||| q)  )   .
+	eq np $ p = np p .
+	eq np $ (ns U nt ) = np $ ns U np $ nt . 
+	eq ( ns U nt )  < w >  = (ns < w > ) U  (nt < w >) .
+
+	***trace union
+	eq P U P = P . 
+	ceq (P ; (Q U BP)  ) = (P ; Q) U (P ;  BP  ) if BP =/= nill .
+	ceq (P U BP) ; BQ = (P ; BQ ) U ( BP ; BQ) if BP =/= nill  .
+	ceq (P U BP) || BQ  = (P || BQ) U ( BP || BQ ) if BP =/= nill .
+	ceq (P || (Q U BP) ) = (P || Q) U (P ||  BP ) if BP =/= nill  .
+
+	*** Computation environment
+	eq (nbp ; nbp1) @ ( vv ) =  nbp @ ( vv  ) ; (  nbp1  @ ( vv ) ) .
+	eq (nbp || nbp1) @ ( vv ) =  ( nbp @ ( vv  ) ) || (  nbp1  @ ( vv ) ) .
+	eq p @ ( nilenv ) = p < ok > .
+	eq p @ ( (p - w ) , vv ) =  p < w > .
+	eq p @ ( (q - w ) , vv ) = p @ vv .
+		****constants yield, throw and skip
+	eq yield @ vv  = nil < ? > .
+	eq throw @ vv = nil < ! > .
+	eq skip @ vv = nil < ok > .	
+
+	***equations for trace inclusion
+	eq  P in nill = false .
+	eq  P in P U BP = true .
+	eq  P in Q U BP =  P in BP .
+	eq  nill in BP = false .
+	eq  P U BP in BQ = P in BQ and-then BP in BQ .
+	***equations for trace equality 
+	eq BP equal BQ = BP in BQ and-then BQ in BP .
+	***equations for trace set difference
+	eq BP diff nill = BP .
+	eq P U BP diff P = BP .
+	eq Q U BP diff P = Q U (BP diff P) . 
+	eq nill diff P = nill .
+	eq BP diff Q U BQ = (BP diff Q) diff BQ .
+	***equations for trace set intersection
+	eq BP int nill = nill .
+	eq P U BP int P = P .
+	eq Q U BP int P = BP int P .
+	eq nill int BP = nill .
+	eq BP int Q U BQ = (BP int Q) U (BP int BQ) . 
+	
+	
+
+	
+	*** compensable processes
+		*** operators trace pairs
+	op _,_ : trace trace -> tracepair [ctor prec 26 ] .
+	op _/_ : trace trace -> tracepairset [prec 26 ] .	
+	op [_] : tracepair -> trace [prec 10 strat(0 1)] .	
+	op _;_ : tracepairset tracepairset -> tracepairset [prec 32  gather (E e)] .
+	op _||_ : tracepairset tracepairset -> tracepairset [prec 32  gather (E e)] .
+	op _#_ : cprocess env -> tracepairset [prec 1 ] .
+	op cnill : -> tracepairset [ctor] .
+	op _U_ :  tracepairset tracepairset -> tracepairset [ctor comm assoc prec 27 id: cnill] .
+
+	***operator compensable processes
+	op _,_ : names names -> cprocess [prec 25 ] .
+	op _/_ : names names -> cprocess [prec 25 ] .
+	op _;_ : cprocess cprocess -> cprocess [prec 30  gather (E e)  ] .
+	op _ || _ : cprocess cprocess -> cprocess [prec 30  gather (E e)  ] .
+	
+	op skipp : -> cprocess .
+	op yieldd : -> cprocess .
+	op throww : -> cprocess .
+	
+	*** equations traces
+		***sequential composition 
+	eq CBP ; cnill = cnill .	
+	eq cnill ; CBP = cnill .
+	eq ((p < ! >, p1 < w1 >) ; QQ ) = (p < ! >) , p1 < w1 > .
+	eq ((P,P1) ; (Q,Q1)) = ((P ; Q),(Q1 ; P1)) [owise] .
+		***parallel composition
+	eq CBP || cnill = CBP .
+		***transaction block  
+	eq [(p < ! > , p1 < w1 >)] = p p1 < w1 >  .
+	eq [(p < ok > , P1)] = p < ok >  .
+	eq [(p < ? >,P1)] =  nill . 
+		***trace union  
+	eq QQ U QQ = QQ .
+	ceq (QQ ; (PP U CBP)  ) = (QQ ; PP) U (QQ ;  CBP ) if CBP =/= cnill .
+	ceq (PP U CBP) ; CBQ = (PP ; CBQ ) U ( CBP ; CBQ ) if CBP =/= cnill .
+	ceq  [ ( CBP U CBQ) ] = [ CBP ] U [ CBQ ] if CBQ =/= cnill /\ CBP =/= cnill .
+	ceq (PP U CBP) || CBQ  = (PP || CBQ) U ( CBP || CBQ ) if CBP =/= cnill .
+	ceq (QQ || (PP U CBP) ) = (QQ || PP) U (QQ ||  CBP ) if CBP =/= cnill .
+	ceq (P U BP) , BQ  = (P , BQ) U ( BP , BQ ) if BP =/= nill .
+	ceq (P , (Q U BP) ) = (P , Q) U (P ,  BP ) if BP =/= nill .
+	
+		***Computation environment
+	eq (cnbp ; cnbp1) # ( vv ) =  cnbp # ( vv  ) ; (  cnbp1  # ( vv ) ) .
+	eq (cnbp || cnbp1) # ( vv ) =  ( cnbp # ( vv  ) ) || (  cnbp1 # ( vv ) ) .
+	eq throww # vv = (nil < ! >) / (nil < ok >)  .
+	eq skipp # vv = (nil < ok >) / (nil < ok >) .
+	eq yieldd # vv = (nil < ? >) / (nil < ok >) .
+	eq (p / q) # ( vv ) = ( p @ vv ) / ( q @ vv ) .
+
+endfm

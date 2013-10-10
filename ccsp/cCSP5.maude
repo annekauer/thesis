@@ -1,0 +1,40 @@
+fmod cCSP5 is
+
+	inc cCSPdiff .
+
+	vars p q p1 q1 : names .
+	vars  i v : name .
+	vars w w1 ww ww1 : end .
+	var P P1 Q : trace .
+	var BP BQ  : tracepairset .
+	var QQ : tracepair .
+
+	***operator zip
+	op zip( _ , _ ) : tracepair tracepair -> tracepairset [prec 20 ] .
+	op _ ^ _ : name tracepairset -> tracepairset [prec 21 ] .
+
+	***sequential composition of traces
+	eq ((p < ? >) ; P) = p < ? > .	
+	eq ((p < ? >, p1 < w1 >) ; QQ ) = (p < ? >) , p1 < w1 > .
+	***parallel composition of traces
+	eq (p < w >) || q < w1 > =  (p ||| q)  < w & w1 > .
+
+	***Compensation pairs
+	eq (( p < ? >)/ P1) = ((nil < ? >),(nil < ok >)) U (( p < ? >),(nil < ok >))   .
+	eq (( p < ! >)/ P1) = ((nil < ? >),(nil < ok >)) U (( p < ! >),(nil < ok >)) .
+	eq (( p < ok >) / P1 ) =((nil < ? >),(nil < ok >)) U (( p < ok >) , P1) U (( p < ? >) , P1) .
+	
+	***parallel composition of trace pairs
+	eq (( p < ok >),P) || (( q < ok >),Q) = (( p < ok >) || ( q < ok >)), (P || Q) .
+	ceq (( p < w >),P) || (( q < w1 >),Q) = zip((( p < w >),P) , (( q < w1 >),Q)) U zip((( q < w1 >),Q), (( p < w >),P)) if  w =/= ok   /\  w1 =/= ok .
+	eq  (( p < w >),P) || (( q < w1 >),Q) = cnill [owise] .
+	
+	***operator zip
+	eq zip( (( p < w >),P) , (  nil < w1 > , Q )) = ( p < w > , (P || Q) ) .
+	eq zip((nil < w > , P ) , ( i q < w1 > , q1 < ww1 > )) = ( i ^ zip((nil < w >,P),(q < w1 >, q1 < ww1 > )))   U ( nil < w > , (P || (i q q1 < ww1 >))) .
+	eq zip(((v p < w >) , P ) , ( i p1 < w1 > , Q )) =  ( v ^ zip((p < w >,P),(i p1 < w1 >,Q)) ) U ( i ^ zip((v p < w >,P),(p1 < w1 >,Q))) .
+
+	ceq v ^ ( BP U BQ ) = v ^ BP U v ^ BQ if BP =/= cnill /\ BQ =/= cnill .
+	eq v ^ (p < w >,P) = (v p < w > , P ) .
+
+endfm

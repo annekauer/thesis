@@ -1,0 +1,94 @@
+mod PETRI is
+
+    inc NAT .
+    ---activities of a transaction are Names, Var(iables) are places/tokens in the net
+    sorts Place Names Marking Transition TransitionSet Configuration . 
+    subsort Place < Marking .
+    subsort Transition < TransitionSet .
+
+    op V : Nat -> Place [ctor] .
+    op F : Nat -> Place [ctor] .
+    op R : Nat -> Place [ctor] .
+    op I1 : Nat -> Place [ctor] .
+    op I2 : Nat -> Place [ctor] .
+    op MEX : Nat -> Place [ctor] .
+    op E : Nat -> Place [ctor] .
+    op W : Nat -> Place [ctor] .
+    op S : Nat -> Place [ctor] .
+    op empty : -> Marking [ctor] .
+    op _+_ : Marking Marking -> Marking [ctor assoc comm id: empty] .
+    op error : -> [Marking] .
+
+
+    op nil : -> Names [ctor] .
+    op __ : Names Names -> Names [prec 1 ctor assoc id: nil ] .
+   
+    op _-_>_ : Marking Names Marking -> Transition [ctor] .
+    op tnil : -> TransitionSet [ctor] .
+    op _,_ : TransitionSet TransitionSet -> TransitionSet [ctor comm assoc id: tnil] .
+    op (_,_,_) : Marking TransitionSet Names -> Configuration .
+    
+    vars T : Transition .
+    var S : TransitionSet .
+	vars M M1 M2 : Marking .
+	vars A N : Names .
+    
+    eq T , T = T . 
+    
+	rl [fire] : (M , ((M - A > M2), S) , N) => (M2 , ((M - A > M2), S) , (N A)) .
+	
+	crl [fire] : ((M + M1) , ((M - A > M2), S) , N) => ((M2 + M1) , ((M - A > M2), S) , (N A)) if M1 =/= empty .
+
+endm
+
+mod SAGA is
+   inc NAT .
+   inc PETRI .
+   
+   sort Name Sagaprocess Cprocess .  
+   subsort Nat < Name < Names < Sagaprocess .
+   sort Encoding .
+  
+   op _;_ : Sagaprocess Sagaprocess -> Sagaprocess [prec 30  gather (E e)  ] .
+   op _ || _ : Sagaprocess Sagaprocess -> Sagaprocess [prec 30  gather (E e)  ] .
+   op throw : -> Sagaprocess .
+   
+   op _,_ : Names Names -> Cprocess [prec 25 ] .
+   op _/_ : Names Names -> Cprocess [prec 25 ] .
+   op _;_ : Cprocess Cprocess -> Cprocess [prec 30  gather (E e)  ] .
+   op _ || _ : Cprocess Cprocess -> Cprocess [prec 30  gather (E e)  ] .
+   op skipp : -> Cprocess .
+   op throww : -> Cprocess .
+   
+   op [_] : Cprocess -> Sagaprocess [prec 20 ] .
+   
+   op (_._) : Nat TransitionSet -> Encoding .
+   op enc : Sagaprocess -> TransitionSet .
+   op enc : Cprocess -> TransitionSet .
+   op encc : Sagaprocess Place Place Place Nat -> Encoding .
+   
+	---Variables
+	vars F1 F2 E : Place .
+	vars Ctr Ctr2 Ctr3 : Nat .
+	vars A N : Names .
+	vars P Q : Sagaprocess .
+	vars T S : TransitionSet .
+
+	ceq enc(P) = T if F1 := F(0) /\ F2 := F(1) /\ E := E(2) /\ Ctr := 3 /\ (Ctr2 . T) := encc(P, F1, F2, E, Ctr) .
+	
+	eq encc(A, F1, F2, E, Ctr) = (Ctr . (F1 - A > F2)) .
+	
+	eq encc(throw, F1, F2, E, Ctr) = (Ctr . (F1 - nil > E)) .
+	
+	ceq encc((P ; Q), F1, F2, E, Ctr) = (Ctr2 . (T , S)) if (Ctr3 . T) := encc(P, F1, F(Ctr), E, (Ctr + 1)) /\ 
+															(Ctr2 . S) := encc(Q, F(Ctr) , F2, E, Ctr3) .
+	
+	ceq encc((P || Q), F1, F2, E, Ctr) = (Ctr2 . (T , S, (F1 - nil > (F(Ctr) + F(Ctr + 3))), ((F(Ctr + 1) + F(Ctr + 4)) - nil > F2), 
+	                                      ((E(Ctr + 2) + F(Ctr + 4)) - nil > E), ((F(Ctr + 1) + E(Ctr + 5)) - nil > E), 
+	                                      ((E(Ctr + 2) + E(Ctr + 5)) - nil > E))) 
+	                                      if (Ctr3 . T) := encc(P, F(Ctr), F(Ctr + 1), E(Ctr + 2), (Ctr + 6)) /\ 
+											 (Ctr2 . S) := encc(Q, F(Ctr + 3) , F(Ctr + 4), E(Ctr + 5), Ctr3) .
+
+endm
+
+

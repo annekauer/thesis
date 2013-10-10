@@ -1,0 +1,44 @@
+mod SAGA1 is
+   inc SAGA .
+   inc PETRI .
+
+   op encc : Cprocess Place Place Place Place Place Place Place Place Nat -> Encoding .
+   
+	---Variables
+	vars F1 F2 R1 R2 I1 I2 W Y E : Place .
+	vars Ctr Ctr2 Ctr3 : Nat .
+	vars A B N : Names .
+	vars PP QQ : Cprocess .
+	vars T S : TransitionSet .
+   
+	ceq enc(PP) = T if F1 := F(0) /\ F2 := F(1) /\ R1 := R(2) /\ R2 := R(3) /\ I1 := I1(4) /\ I2 := I2(5) /\ W := W(6) /\ Y := S(7)
+					   /\ Ctr := 8 /\ (Ctr2 . T) := encc(PP, F1, F2, R1, R2, I1, I2, W, Y, Ctr) .
+											 
+	---compensation pairs
+	eq encc(A / B, F1, F2, R1, R2, I1, I2, W, Y,Ctr) = (Ctr . ((F1 - A > F2), ((R1 + Y) - B > (R2 + Y)), ((I1 + I2) - nil > empty))) .
+
+	---throww
+	eq encc(throww, F1, F2, R1, R2, I1, I2, W, Y,Ctr) = (Ctr . ((F1 - nil > (W + R2 + I2)),	((I1 + I2) - nil > empty))) .
+	
+	---sequential composition
+	ceq encc((PP ; QQ), F1, F2, R1, R2, I1, I2, W, Y,Ctr) = (Ctr2 . T, S) 
+						if (Ctr3 . T) := encc(PP, F1, F(Ctr), R(Ctr + 1), R2, I1(Ctr + 2), I2, W, Y,(Ctr + 3)) /\
+						   (Ctr2 . S) := encc(QQ, F(Ctr), F2, R1, R(Ctr + 1), I1, I2, W, Y,(Ctr3)) .
+
+	---parallel composition
+	ceq encc((PP || QQ), F1, F2, R1, R2, I1, I2, W, Y,Ctr) = (Ctr2 . (T, S, (F1 - nil > (F(Ctr) + F(Ctr + 6) + MEX(Ctr + 12) + V(Ctr + 17))), 
+			((F(Ctr + 1) + F(Ctr + 7) + MEX(Ctr + 12) + V(Ctr + 17)) - nil > F2),
+			((I1 + I2) - nil > empty), (I1 + MEX(Ctr + 12) - nil > (I1(Ctr + 4) + I1(Ctr + 10))),
+			((I2(Ctr + 5) + MEX(Ctr + 12)) - nil > (I2 + I1(Ctr + 10))), ((I2(Ctr + 11) + MEX(Ctr + 12)) - nil > (I2 + I1(Ctr + 4))),
+			(R1 - nil > (R(Ctr + 2) + R(Ctr + 8) + V(Ctr + 17))), ((R(Ctr + 3) + R(Ctr + 9) + S(Ctr + 14) + S(Ctr + 16)) - nil > (Y + R2)),
+			((Y + V(Ctr + 17)) - nil > (S(Ctr + 14) + S(Ctr + 16))), ((W(Ctr + 13) + W(Ctr + 15)) - nil > W),
+			((F(Ctr + 1) + I1(Ctr + 4)) - nil > (R(Ctr + 2) + W(Ctr + 13))), ((F(Ctr + 7) + I1(Ctr + 10)) - nil > (R(Ctr + 8) + W(Ctr + 15))) )) 
+		if (Ctr3 . T) := encc(PP, F(Ctr    ), F(Ctr + 1), R(Ctr + 2), R(Ctr + 3), I1(Ctr + 4 ), I2(Ctr + 5 ), W(Ctr + 13), S(Ctr + 14),(Ctr + 18)) /\
+		   (Ctr2 . S) := encc(QQ, F(Ctr + 6), F(Ctr + 7), R(Ctr + 8), R(Ctr + 9), I1(Ctr + 10), I2(Ctr + 11), W(Ctr + 15), S(Ctr + 16), (Ctr3)) .
+	
+	ceq encc([PP], F1, F2, E, Ctr) = (Ctr2 . (T, (F1 - nil > (F(Ctr) + V(Ctr + 8))), ((V(Ctr + 8) + W(Ctr + 6)) - nil > S(Ctr + 7)),
+			   ((F(Ctr + 1) + V(Ctr + 8) - nil > F2)), ((R(Ctr + 3) + I2(Ctr + 5) + S(Ctr + 7)) - nil > F2 ))) 
+	  		if (Ctr2 . T) := encc (PP, F(Ctr), F(Ctr + 1), R(Ctr + 2), R(Ctr + 3) , I1(Ctr + 4), I2(Ctr + 5), W(Ctr + 6), S(Ctr + 7), (Ctr + 9)) .
+
+
+endm

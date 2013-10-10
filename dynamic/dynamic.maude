@@ -1,0 +1,371 @@
+fmod VARIABLE is
+  pr NAT .
+
+  sort Variable .
+
+  op V : Nat -> Variable [ctor] .
+
+endfm
+
+view Variable from TRIV to VARIABLE is
+  sort Elt to Variable .
+endv
+
+fmod STATE is
+  inc VARIABLE .
+  pr INT .
+  pr MAP{ Variable , Int } *
+    (sort Entry{Variable,Int} to Entry , sort Map{Variable, Int} to State , op empty to idstate ) .
+  op nostate : -> State .
+
+endfm
+
+fmod SYNTAX is
+  inc STATE .
+  pr SET{ Variable } * (sort Set{Variable} to VariableSet , op empty to emptyvar ) .
+
+  sort Action Program CompProgram .
+  subsort Action < Program .
+
+  op _;_ : Program Program -> Program [ctor assoc prec 38] .
+  op _O_ : Program Program -> Program [ctor assoc comm prec 40] .
+  op _|_ : Program Program -> Program [ctor assoc comm prec 35] .
+  op _? : BaseFormula -> Program [ctor] .
+  op _*_ : Program Nat -> Program [ctor prec 32] .
+  op {_} : CompProgram -> Program [ctor] .
+
+  op _%_ : Action Action -> CompProgram [ctor prec 30] .
+  op _;_ : CompProgram CompProgram -> CompProgram [ctor assoc prec 38] .
+  op _O_ : CompProgram CompProgram -> CompProgram [ctor assoc comm prec 40] .
+  op _|_ : CompProgram CompProgram -> CompProgram [ctor assoc comm prec 35] .
+  op _*_ : CompProgram Nat -> CompProgram [ctor prec 32] .
+
+*************************
+
+  sorts Term Predicate BaseFormula Formula .
+  subsort Predicate < BaseFormula < Formula .
+  subsort Int Variable < Term .
+
+  ops tt ff : -> BaseFormula [ctor] .
+
+  op _&_ : BaseFormula BaseFormula -> BaseFormula [ctor assoc comm] .
+  op _&_ : Formula Formula -> Formula [ctor assoc comm] .
+
+  op _+_ : BaseFormula BaseFormula -> BaseFormula [ctor assoc comm] .
+  op _+_ : Formula Formula -> Formula [ctor assoc comm] .
+
+  op -_ :  BaseFormula -> BaseFormula [ctor] .
+  op -_ : Formula -> Formula [ctor] .
+
+  op [_]_ : Program Formula -> Formula .
+  op <_>_ : Program Formula -> Formula .
+
+  op S : Program -> Formula .
+  op Sw : Program -> Formula .
+  op F : Program -> Formula .
+
+  op [_]_ : CompProgram Formula -> Formula .
+  op <_>_ : CompProgram Formula -> Formula .
+
+  op S : CompProgram -> Formula .
+  op Sw : CompProgram -> Formula .
+  op F : CompProgram -> Formula .
+  op C : CompProgram VariableSet -> Formula .
+  op Cw : CompProgram VariableSet -> Formula .
+
+
+  op add : Term Term -> Term .
+
+  op le : Term Term -> Predicate .
+  op eq : Term Term -> Predicate .
+
+*****************************
+
+  sort Assignment .
+
+  op def : Variable Term -> Assignment [ctor] .
+  op skip : -> Assignment [ctor] .
+  op __ : Assignment Assignment -> Assignment [ctor assoc comm id: skip ] .
+
+  op act : Assignment BaseFormula -> Action .
+
+*****************************
+
+  sorts Trace BaseTrace TracePair .
+  subsort BaseTrace < Trace .
+
+  op epsilon : -> Trace [ctor] .
+  op __ : Trace Trace -> Trace [ctor assoc id: epsilon] .
+
+  op [_] : Action -> BaseTrace .
+  op [-_] : Action -> BaseTrace .
+  op [_??] : BaseFormula -> BaseTrace .
+
+  op (_._) : Trace Trace -> TracePair .
+  op prf : TracePair -> Trace .
+  op prb : TracePair -> Trace .
+
+  vars S T : Trace .
+
+  eq prf(S . T) = S .
+  eq prb(S . T) = T .
+
+endfm
+
+view Trace from TRIV to SYNTAX is
+  sort Elt to Trace .
+endv
+
+view TracePair from TRIV to SYNTAX is
+  sort Elt to TracePair .
+endv
+
+fmod PROGRAMS is
+  inc SYNTAX .
+  pr SET{Trace} * (sort Set{Trace} to TraceSet , sort NeSet{Trace} to NeTraceSet , op empty to nill) .
+  pr SET{TracePair} * (sort Set{TracePair} to TracePairSet , sort NeSet{TracePair} to NeTracePairSet ) .
+
+  op prf : TracePairSet -> TraceSet .
+  op prb : TracePairSet -> TraceSet .
+
+
+  op rho : Program -> TraceSet .
+  op rho : CompProgram -> TracePairSet .
+
+  op E : Trace -> Bool .
+
+  op _o_ : Trace Trace -> Trace .
+  op _o_ : TraceSet TraceSet -> TraceSet .
+
+  op _os_ : Trace TraceSet -> TraceSet .
+
+  op _||_ : Trace Trace -> TraceSet .
+  op _||_ : TraceSet TraceSet -> TraceSet .
+
+  op _o_ : TracePair TracePair -> TracePair .
+  op _o_ : TracePairSet TracePairSet -> TracePairSet .
+
+  op _||_ : TracePair TracePair -> TracePairSet .
+  op _||_ : TracePairSet TracePairSet -> TracePairSet .
+
+  op _x_ : TraceSet TraceSet -> TracePairSet .
+
+  op cl : Trace -> Trace .
+  op cl : TracePair -> Trace .
+  op clear : TracePairSet -> TraceSet .
+
+  vars A B C : Action .
+  vars P Q R : Program .
+  vars PP QQ RR : CompProgram .
+  vars T S : TraceSet .
+  vars N : NzNat .
+  vars F G H I : Trace .
+  vars K L : BaseTrace .
+  vars TT SS : TracePairSet .
+  vars FF GG : TracePair .
+  vars Y : BaseFormula .
+  vars J : Assignment .
+
+  eq prf( (FF, TT)) = prf(FF), prf(TT) .
+  eq prb( (FF, TT)) = prb(FF), prb(TT) .
+
+  eq E(epsilon) = false .
+  eq E([A] F) = E(F) .
+  eq E([Y ??] F) = E(F) .
+  eq E([- A] F) = true .
+
+  ceq F o G = F G if not E(F) .
+  ceq F o G = F if E(F) .
+
+  eq nill o S = nill .
+  eq (F , T) o nill = nill .
+  eq (F , T) o (G , S) = union( F o G , union(F o S , T o (G , S) ) ).
+
+  eq F os nill = nill .
+  eq epsilon os (F , T) = (F , T) .
+  eq F os (G , T) = union( F G , (F os T) ) .
+
+  eq epsilon || G = G .
+  eq F || epsilon = F .
+  ceq (K F) || (L G) = union((K os T), (L os S)) if T := (F || (L G)) /\ S := ((K F) || G) .
+  eq nill || T = nill .
+  eq (F , T) || nill = nill .
+  eq (F, T) || (G , S) = union( (F || G) , union( (F || S) , (T || (G , S)) ) ) .
+
+  ceq (F . G) o (H . I) = ( F o H . I o G ) if not E(F) .
+  ceq (F . G) o (H . I) = ( F . G ) if E(F) .
+  eq empty o TT = empty .
+  eq (FF , TT) o empty = empty .
+  eq (FF , TT) o (GG , SS) = union( FF o GG , union (FF o SS , TT o (GG , SS) ) ) .
+
+  eq nill x T = empty .
+  eq (F , T) x nill = empty .
+  eq (F , T) x (G , S) = union( (F . G) , union( ( F x S) , (T x (G , S)))) .
+
+  eq (F . G) || (H . I) = (F || H) x ( G || I) .
+  eq empty || TT = empty .
+  eq (FF , TT) || empty = empty .
+  eq (FF , TT) || (GG , SS) = union( FF || GG , union (FF || SS , TT || (GG , SS) ) ) .
+
+  eq cl(epsilon) = epsilon .
+  eq cl([A] F) = [A] cl(F) .
+  eq cl([Y ??] F) = [Y ??] cl(F) .
+  eq cl([- act(J, Y)] F) = [Y ??] cl(F) .
+
+  ceq cl(F . G) = F if not E(F) .
+  ceq cl(F . G) = (cl(F) G) if E(F) .
+
+  eq clear(empty) = nill .
+  eq clear((FF , TT)) = union( cl(FF), clear(TT) ) .
+
+
+  eq rho(A) = union( [A], [- A]) .
+  eq rho(P ; Q) = rho(P) o rho( Q) .
+  eq rho(P O Q) = union( rho(P) , rho(Q)) .
+  eq rho(P | Q) = rho(P) || rho(Q) .
+  eq rho(Y ?) = [ Y ??] .
+  eq rho(P * 0) = epsilon .
+  eq rho(P * N) = rho(P) o rho(P * (N - 1)) .
+  eq rho( {PP} ) = clear(rho(PP)) .
+
+  eq rho(A % B) = ([A] . [B]) , ([- A] . epsilon) .
+  eq rho(PP ; QQ) = rho(PP) o rho( QQ) .
+  eq rho(PP O QQ) = union( rho(PP) , rho(QQ)) .
+  eq rho(PP | QQ) = rho(PP) || rho(QQ) .
+  eq rho(PP * 0) = (epsilon . epsilon) .
+  eq rho(PP * N) = rho(PP) o rho(PP * (N - 1)) .
+
+
+endfm
+
+fmod SEMANTICS is
+  inc PROGRAMS .
+
+
+  op val : Term State -> [Int] .
+  op val : Predicate State -> Bool .
+  op val : Assignment State -> State .
+  op val : Action State -> State .
+  op val : Trace State -> State .
+
+  op _|-_ : State Formula -> Bool .
+  op __|-_ : State TraceSet Formula -> Bool .
+  op ssucc : State TraceSet -> Bool .
+  op fail : State TraceSet -> Bool .
+
+  op _\__ : State VariableSet State -> State .
+  op comp : State VariableSet TracePairSet -> Bool .
+  op compw : State VariableSet TracePairSet -> Bool .
+
+  vars A B C : Action .
+  vars Q : Program .
+  vars QQ : CompProgram .
+  vars N : Nat .
+  vars I : Int .
+  vars S SS ST : State .
+  vars T U : Term .
+  var V : Variable .
+  var X : VariableSet .
+  var P : Predicate .
+  var F G : Formula .
+  var J : Assignment .
+  var E D : Trace .
+  var Es : TraceSet .
+  var Ds : TracePairSet .
+
+***  eq val(N , S) = N .
+  eq val(I , S) = I .
+  ceq val(V , S) = S[V] if S[V] : Int .
+  eq val(add(T, U), S) = val(T, S) + val(U, S) .
+
+  ceq val(le(T, U), S) = val(T, S) < val(U,S) if val(T, S) : Int /\ val(U, S) : Int .
+  eq val(le(T, U), S) = false [owise] .
+  ceq val(eq(T, U), S) = val(T, S) == val(U,S) if val(T, S) : Int /\ val(U, S) : Int .
+  eq val(eq(T, U), S) = false [owise] .
+
+  eq val(skip, S) = S .
+  ceq val((def(V, T) J), S) = insert(V, val(T, SS), SS ) if SS := val(J, S) .
+
+***  ceq val(act(J,F), S) = S if (S |- F) .
+***  ceq val(act(J,F), S) = val(J,S) if not (S |- F) .
+
+  eq val(epsilon, S) = S .
+  ceq val( [ act(J,F)] E, S) = val(E, val(J, S)) if not (S |- F) .
+  ceq val( [ F ??] E, S) = val(E, S) if (S |- F) .
+  ceq val( [ F ??] E, S) = nostate if not (S |- F) .
+  ceq val( [ act(J,F)] E, S) = nostate if (S |- F) .
+  ceq val( [- act(J,F)] E, S) = val(E, S) if (S |- F) .
+  ceq val( [- act(J,F)] E, S) = nostate if not (S |- F) .
+
+  eq (S \ emptyvar SS)  = idstate .
+  ceq (S \ (V, X) SS) = insert(V, (S[V] - SS[V]), (S \ X SS)) if S[V] : Int /\ SS[V] : Int .
+
+
+*************
+  eq S |- tt = true .
+  eq S |- ff = false .
+  eq S |- P = val(P,S) .
+  eq S |- (- F) = not (S |- F) .
+  eq S |- (F & G) = (S |- F) and (S |- G) .
+  eq S |- (F + G) = (S |- F) or (S |- G) .
+  ceq S |- [ Q ] F = (S Es |- F) if  Es := rho(Q) .
+  eq S |- < Q > F = (S |- ( - ([ Q ] (- F)))) .
+  ceq S |- S(Q) = ssucc(S, Es) if Es := rho(Q) .
+  ceq S |- F(Q) = fail(S, Es) if Es := rho(Q) .
+  eq S |- Sw(Q) = (S |- - F(Q)) .
+
+  ceq S |- [ QQ ] F = (S Es |- F) if  Es := prf(rho(QQ)) .
+  eq S |- < QQ > F = (S |- ( - ([ QQ ] (- F)))) .
+  ceq S |- S(QQ) = ssucc(S, Es) if Es := prf(rho(QQ)) .
+  ceq S |- F(QQ) = fail(S, Es) if Es := prf(rho(QQ)) .
+  eq S |- Sw(QQ) = (S |- - F(QQ)) .
+  ceq S |- C(QQ, X) = comp(S, X, Ds) if Ds := rho(QQ) .
+  ceq S |- Cw(QQ, X) = compw(S, X, Ds) if Ds := rho(QQ) .
+
+*************
+
+  eq S nill |- F = true .
+  ceq S (E, Es) |- F = (S Es |- F) if  nostate == val(E,S) .
+  ceq S (E, Es) |- F = (S Es |- F) if SS := val(E,S) /\ nostate =/= SS /\ SS |- F .
+  ceq S (E, Es) |- F = false if SS := val(E,S) /\ nostate =/= SS /\ not(SS |- F) .
+
+  eq ssucc(S, nill) = true .
+  ceq ssucc(S, (E, Es)) = ssucc(S, Es) if  nostate == val(E,S) .
+  ceq ssucc(S, (E, Es)) = ssucc(S, Es) if nostate =/= val(E,S) /\ not E(E) .
+  ceq ssucc(S, (E, Es)) = false if nostate =/= val(E,S) /\ (E(E)) .
+
+  eq fail(S, nill) = true .
+  ceq fail(S, (E, Es)) = fail(S, Es) if  nostate == val(E,S) .
+  ceq fail(S, (E, Es)) = fail(S, Es) if nostate =/= val(E,S) /\ E(E) .
+  ceq fail(S, (E, Es)) = false if  nostate =/= val(E,S) /\ not (E(E)) .
+
+  eq comp(S, X, empty) = true .
+  ceq comp(S, X, ( (D . E) , Ds)) = comp(S, X, Ds) if not E(D) .
+  ceq comp(S, X, ( (D . E) , Ds)) = comp(S, X, Ds) if nostate == val(D,S) .
+  ceq comp(S, X, ( (D . E) , Ds)) = comp(S, X, Ds) if SS := val(D,S) /\ SS =/= nostate /\ nostate == val(E,SS) .
+  ceq comp(S, X, ( (D . E) , Ds)) = comp(S, X, Ds) if SS := val(D,S) /\ SS =/= nostate /\ ST := val(E,SS) /\  nostate =/= ST /\ E(D) /\ (S \ X SS) == (ST \ X SS) .
+  ceq comp(S, X, ( (D . E) , Ds)) = false if SS := val(D,S) /\ SS =/= nostate /\ ST := val(E,SS) /\  nostate =/= ST /\ E(D) /\ (S \ X SS) =/= (ST \ X SS) .
+
+  eq compw(S, X, empty) = false .
+  ceq compw(S, X, ( (D . E) , Ds)) = compw(S, X, Ds) if not E(D) .
+  ceq compw(S, X, ( (D . E) , Ds)) = compw(S, X, Ds) if nostate == val(D,S) .
+  ceq compw(S, X, ( (D . E) , Ds)) = compw(S, X, Ds) if SS := val(D,S) /\ SS =/= nostate /\ nostate == val(E,SS) .
+  ceq compw(S, X, ( (D . E) , Ds)) = true if SS := val(D,S) /\ SS =/= nostate /\ ST := val(E,SS) /\  nostate =/= ST /\ E(D) /\ (S \ X SS) == (ST \ X SS) .
+  ceq compw(S, X, ( (D . E) , Ds)) = compw(S, X, Ds) if SS := val(D,S) /\ SS =/= nostate /\ ST := val(E,SS) /\  nostate =/= ST /\ E(D) /\ (S \ X SS) =/= (ST \ X SS) .
+
+endfm
+
+fmod EXAMPLE is
+  inc SEMANTICS .
+
+  ops aO aC rC throw bC : -> Action .
+  ops rooms status price fee status2 price2 fee2 : -> Variable .
+endfm
+
+
+
+*** red rho( {(A % B); (B % C)} ) .
+*** red val( [ act(def(V(0), add(V(0), - 1)), le( V(0), 0))] ,(V(0) |-> 1)) .
+*** red (V(0) |-> 1) |- [ act(def(V(0), add(V(0), - 1)), le( V(0), 0)) ] eq(V(0), 0) .
+*** act( def( V(0) , add(V(0), - 1)) def(V(1), 0),( le(V(0), 0) + eq(V(0), 0))) ; ( act(def(V(1), 1), ff) O (act(def(V(1), 2), ff) ; act( skip , tt)) | act(def(V(2) , 1), eq(V(1), 2)))
+***  {act( def( rooms , add(rooms, - 1)) def(status, 0) def(price, 140) def(fee, 20), le(rooms, 0) + eq(rooms, 0)) % act( def( rooms , add(rooms, 1))  def(price, fee)  def(fee, 0), ff) ;  (act( def(status, 1), ff) % act( skip, ff) O act(def(status, -1), ff) % act( skip, ff) ; act( skip, tt) % act( skip, ff))} | { act( def( rooms , add(rooms, - 1)) def(status2, 0) def(price2, 140) def(fee2, 20), le(rooms, 0) + eq(rooms, 0)) % act( def( rooms , add(rooms, 1))  def(price2, fee2)  def(fee2, 0), ff) ;  (act( def(status2, 1), ff) % act( skip, ff) O act(def(status2, -1), ff) % act( skip, ff) ; act( skip, tt) % act( skip, ff)) }

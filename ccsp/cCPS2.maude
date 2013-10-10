@@ -1,0 +1,23 @@
+fmod cCSP2 is
+
+	inc cCSPdiff .
+	vars p q p1 q1 : names .
+	vars w ww w1 ww1 : end .
+	var Q : trace .
+	var QQ : tracepair .
+
+	***sequential composition of traces
+	eq ((p < ? >) ; Q) = nill .	
+	eq ((p < ? >, p1 < w1 >) ; QQ ) = cnill .
+	***parallel composition of traces
+	eq (p < w >) || q < w1 > =  (p ||| q)  < w & w1 > .
+	***parallel composition of trace pairs
+	eq (( p < ok >),( p1 < w >)) || (( q < ok >),( q1 < w1 >)) = (( p < ok >) || ( q < ok >)), (( p1 < w >) || ( q1 < w1 >))  U ( (( (p p1) < ok >)||( (q q1) < ? >)),(nil < ok >))  .
+	ceq (( p < w >),( p1 < ww >)) || (( q < w1 >),( q1 < ww1 >)) = (((p  p1) < w & w1 >) ||((q  q1) < w & w1 >)),( nil < ok >) if  (  w =/= ok   or  w1 =/= ok ) .
+
+	***Compensation pairs 
+	eq ((p < ? >) / Q) = ((nil < ok >),(nil < ok >)) .
+	eq ((p < ! >) / Q) = ((p < ! >),(nil < ok >)) . 
+	eq ((p < ok >) / Q) = (p < ok >),Q .
+
+endfm
